@@ -63,6 +63,7 @@ from ..warehouse.reservations import is_reservation_enabled
 from . import AddressType
 from .base_calculations import (
     base_checkout_delivery_price,
+    base_checkout_undiscounted_delivery_price,
     calculate_base_line_unit_price,
     calculate_undiscounted_base_line_total_price,
     calculate_undiscounted_base_line_unit_price,
@@ -168,6 +169,7 @@ def _release_checkout_voucher_usage(
 
 def _process_shipping_data_for_order(
     checkout_info: "CheckoutInfo",
+    undiscounted_base_shipping_price: Money,
     base_shipping_price: Money,
     shipping_price: TaxedMoney,
     manager: "PluginsManager",
@@ -195,6 +197,7 @@ def _process_shipping_data_for_order(
     tax_class = getattr(shipping_method, "tax_class", None)
 
     result: dict[str, Any] = {
+        "undiscounted_base_shipping_price": undiscounted_base_shipping_price,
         "shipping_address": shipping_address,
         "base_shipping_price": base_shipping_price,
         "shipping_price": shipping_price,
@@ -504,6 +507,9 @@ def _prepare_order_data(
         address=address,
     )
 
+    undiscounted_base_shipping_price = base_checkout_undiscounted_delivery_price(
+        checkout_info, lines
+    )
     base_shipping_price = base_checkout_delivery_price(checkout_info, lines)
     shipping_total = calculations.checkout_shipping_price(
         manager=manager,
@@ -519,7 +525,12 @@ def _prepare_order_data(
     )
     order_data.update(
         _process_shipping_data_for_order(
-            checkout_info, base_shipping_price, shipping_total, manager, lines
+            checkout_info,
+            undiscounted_base_shipping_price,
+            base_shipping_price,
+            shipping_total,
+            manager,
+            lines,
         )
     )
     order_data.update(_process_user_data_for_order(checkout_info, manager))
@@ -1214,6 +1225,9 @@ def _create_order_from_checkout(
     voucher = checkout_info.voucher
 
     # shipping
+    undiscounted_base_shipping_price = base_checkout_undiscounted_delivery_price(
+        checkout_info, checkout_lines_info
+    )
     base_shipping_price = base_checkout_delivery_price(
         checkout_info, checkout_lines_info
     )
@@ -1268,6 +1282,7 @@ def _create_order_from_checkout(
         tax_exemption=checkout_info.checkout.tax_exemption,
         **_process_shipping_data_for_order(
             checkout_info,
+            undiscounted_base_shipping_price,
             base_shipping_price,
             shipping_total,
             manager,
