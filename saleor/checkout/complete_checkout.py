@@ -549,7 +549,7 @@ def _prepare_order_data(
             ],
             start=zero_taxed_money(taxed_total.currency),
         )
-        + shipping_total
+        + undiscounted_base_shipping_price
     )
 
     subtotal = get_subtotal(
@@ -1309,7 +1309,7 @@ def _create_order_from_checkout(
             [line_info.line.undiscounted_total_price for line_info in order_lines_info],
             start=zero_taxed_money(taxed_total.currency),
         )
-        + shipping_total
+        + undiscounted_base_shipping_price
     )
     order.undiscounted_total = undiscounted_total
     currency = checkout_info.checkout.currency
